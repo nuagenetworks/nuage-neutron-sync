@@ -105,25 +105,37 @@ class Sync:
             # shared subnet
             shared_network = vspk.NUSharedNetworkResource(id=nuage_subnet.associated_shared_network_resource_id)
             shared_network.fetch()
-            if shared_network.dhcp_managed:
+            if shared_network.type == "PUBLIC":
                 address = shared_network.address
                 netmask = shared_network.netmask
                 gateway = shared_network.gateway
+                enable_dhcp = True
             else:
+                # L2 domain
                 address = self.cfg.get_unmanged_networks_subnet()
                 netmask = self.cfg.get_unmanged_networks_netmask()
-                gateway = None
-        elif nuage_subnet.parent_type != "enterprise" or nuage_subnet.dhcp_managed is True:
-            # L3 subnet or (L2 and DHCP managed)
-            # note: dhcp_managed parameter only exist for L3 subnet
+                # gateway = None if dhcp option does not exist
+                gateway = shared_network.dhcp_options.get_first(filter="type=='03'")
+                enable_dhcp = shared_network.dhcp_managed
+        elif nuage_subnet.parent_type != "enterprise":
+            # L3 subnet
             address = nuage_subnet.address
             netmask = nuage_subnet.netmask
             gateway = nuage_subnet.gateway
+            enable_dhcp = True
+        elif nuage_subnet.dhcp_managed is True:
+            # managed L2 (dhcp_managed attribute only exist for l2domain)
+            address = nuage_subnet.address
+            netmask = nuage_subnet.netmask
+            # gateway = None if dhcp option does not exist
+            gateway = nuage_subnet.dhcp_options.get_first(filter="type=='03'")
+            enable_dhcp = True
         else:
             # unmanaged L2
             address = self.cfg.get_unmanaged_networks_subnet()
             netmask = self.cfg.get_unmanaged_networks_netmask()
             gateway = None
+            enable_dhcp = False
 
         # generate subnet
         cidr = self.net_nm_sanitizer(address, netmask)
@@ -141,14 +153,14 @@ class Sync:
                     self.logger.error("Invalid cidr ({0}) set in metadata of nuage subnet {1}. Ignoring"
                                       .format(metadata_cidr.blob, nuage_subnet.id))
                     self.logger.error(str(e))
-        return cidr, gateway
+        return cidr, gateway, enable_dhcp
 
     def add_neutron_subnet(self, nuage_subnet, project, enterprise):
         # Ignore shared subnets if not enabled in the configuration file
         if nuage_subnet.associated_shared_network_resource_id is not None and \
                 not self.cfg.get_value('sync', 'sync_shared_subnets'):
             self.logger.debug("Ignoring vsd subnet {0}. Sync of shared subnets is disabled in configuration.".format(
-                nuage_subnet['ID']))
+                nuage_subnet.id))
             return
 
         # ignore L3 shared subnet with nothing attached
@@ -156,7 +168,7 @@ class Sync:
                 and nuage_subnet.associated_shared_network_resource_id is None:
             if self.cfg.get_value('sync', 'sync_shared_subnets'):
                 self.logger.debug("Ignoring vsd subnet {0}. Sync of shared subnets is disabled in configuration."
-                                  .format(nuage_subnet['ID']))
+                                  .format(nuage_subnet.id))
             else:
                 self.logger.info("vsd subnet {0} is a shared L3 subnet without the subnet attached. Ignoring")
             return
@@ -180,7 +192,7 @@ class Sync:
             self.logger.error(str(e))
             return
 
-        cidr, gateway = self.get_cidr_and_gateway(nuage_subnet)
+        cidr, gateway, enable_dhcp = self.get_cidr_and_gateway(nuage_subnet)
 
         body_subnet = {
             "subnets": [
@@ -196,9 +208,9 @@ class Sync:
             ]
         }
 
-        if gateway is None:
-            body_subnet['subnets'][0]['enable_dhcp'] = False
-        else:
+        body_subnet['subnets'][0]['enable_dhcp'] = enable_dhcp
+
+        if gateway is not None:
             body_subnet['subnets'][0]['gateway_ip'] = gateway
 
         try:
@@ -232,16 +244,15 @@ class Sync:
                                                                                           openstack_subnet['name'],
                                                                                           subnet_name))
 
-        cidr, gateway = self.get_cidr_and_gateway(nuage_subnet)
-        if gateway is None:
-            if openstack_subnet['enable_dhcp'] is True:
-                mapping_correct = False
-                self.logger.debug("DHCP removed in subnet {0} (\"{1}\")".format(nuage_subnet.id, subnet_name))
-        else:
-            if openstack_subnet['gateway_ip'] != gateway:
-                mapping_correct = False
-                self.logger.debug("Gateway IP of subnet {0} (\"{1}\") changed to {2}".
-                                  format(nuage_subnet.id, subnet_name, gateway))
+        cidr, gateway, enable_dhcp = self.get_cidr_and_gateway(nuage_subnet)
+        if enable_dhcp != openstack_subnet['enable_dhcp']:
+            mapping_correct = False
+            self.logger.debug("DHCP not correct in subnet {0} (\"{1}\")".format(nuage_subnet.id, subnet_name))
+
+        if openstack_subnet['gateway_ip'] != gateway:
+            mapping_correct = False
+            self.logger.debug("Gateway IP of subnet {0} (\"{1}\") changed to {2}".
+                              format(nuage_subnet.id, subnet_name, gateway))
 
         if cidr != openstack_subnet['cidr']:
             self.logger.debug("CIDR of subnet {0} (\"{1}\") changed to {2}".format(nuage_subnet.id, subnet_name, cidr))
