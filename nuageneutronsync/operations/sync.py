@@ -106,17 +106,23 @@ class Sync:
             shared_network = vspk.NUSharedNetworkResource(id=nuage_subnet.associated_shared_network_resource_id)
             shared_network.fetch()
             if shared_network.type == "PUBLIC":
+                # shared L3 subnet
                 address = shared_network.address
                 netmask = shared_network.netmask
                 gateway = shared_network.gateway
                 enable_dhcp = True
             else:
-                # L2 domain
-                address = self.cfg.get_unmanged_networks_subnet()
-                netmask = self.cfg.get_unmanged_networks_netmask()
+                # shared L2 subnet
+                if shared_network.dhcp_managed:
+                    enable_dhcp = True
+                    address = shared_network.address
+                    netmask = shared_network.netmask
+                else:
+                    address = self.cfg.get_unmanaged_networks_subnet()
+                    netmask = self.cfg.get_unmanaged_networks_netmask()
+                    enable_dhcp = False
                 # gateway = None if dhcp option does not exist
                 gateway = shared_network.dhcp_options.get_first(filter="type=='03'")
-                enable_dhcp = shared_network.dhcp_managed
         elif nuage_subnet.parent_type != "enterprise":
             # L3 subnet
             address = nuage_subnet.address
@@ -156,23 +162,6 @@ class Sync:
         return cidr, gateway, enable_dhcp
 
     def add_neutron_subnet(self, nuage_subnet, project, enterprise):
-        # Ignore shared subnets if not enabled in the configuration file
-        if nuage_subnet.associated_shared_network_resource_id is not None and \
-                not self.cfg.get_value('sync', 'sync_shared_subnets'):
-            self.logger.debug("Ignoring vsd subnet {0}. Sync of shared subnets is disabled in configuration.".format(
-                nuage_subnet.id))
-            return
-
-        # ignore L3 shared subnet with nothing attached
-        if nuage_subnet.parent_type != "enterprise" and nuage_subnet.address is None \
-                and nuage_subnet.associated_shared_network_resource_id is None:
-            if self.cfg.get_value('sync', 'sync_shared_subnets'):
-                self.logger.debug("Ignoring vsd subnet {0}. Sync of shared subnets is disabled in configuration."
-                                  .format(nuage_subnet.id))
-            else:
-                self.logger.info("vsd subnet {0} is a shared L3 subnet without the subnet attached. Ignoring")
-            return
-
         net_name = self.calc_subnetname(nuage_subnet)
 
         # create network
@@ -286,6 +275,23 @@ class Sync:
                 self.logger.error(str(e))
 
     def sync_subnet(self, enterprise, nuage_subnet, project, subnet_mappings):
+        # Ignore shared subnets if not enabled in the configuration file
+        if nuage_subnet.associated_shared_network_resource_id is not None and \
+                not self.cfg.get_boolean('sync', 'sync_shared_subnets'):
+            self.logger.debug("Ignoring vsd subnet {0}. Sync of shared subnets is disabled in configuration.".format(
+                nuage_subnet.id))
+            return
+
+        # ignore L3 shared subnet with nothing attached
+        if nuage_subnet.parent_type != "enterprise" and nuage_subnet.address is None \
+                and nuage_subnet.associated_shared_network_resource_id is None:
+            if self.cfg.get_boolean('sync', 'sync_shared_subnets'):
+                self.logger.debug("Ignoring vsd subnet {0}. Sync of shared subnets is disabled in configuration."
+                                  .format(nuage_subnet.id))
+            else:
+                self.logger.info("vsd subnet {0} is a shared L3 subnet without the subnet attached. Ignoring")
+            return
+
         synced = False
         if nuage_subnet.id in subnet_mappings:
             synced = True
