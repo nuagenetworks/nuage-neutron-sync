@@ -17,6 +17,9 @@ class Config:
     def get_value(self, section, name):
         return self.cfg.get(section, name)
 
+    def get_boolean(self, section, name):
+        return self.cfg.getboolean(section, name)
+
     def get_log_config(self):
         # default values
         enable_rotate = False
