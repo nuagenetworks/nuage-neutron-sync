@@ -10,13 +10,25 @@ from neutronclient.common.exceptions import NotFound as neutron_NotFound
 from keystoneauth1.exceptions.http import NotFound as keystone_NotFound
 from novaclient import client as nova_client
 from prettytable import PrettyTable
-import vspk.v4_0 as vspk
+import sys
+import importlib
+
+vspk = None
 
 
 class Tenant:
     def __init__(self, config):
         self.cfg = config
         self.logger = logging.getLogger('nuage-neutron-sync')
+
+        self.version = self.cfg.get_value('vsd', 'version')
+        try:
+            global vspk
+            vspk = importlib.import_module('vspk.{0:s}'.format(self.version))
+        except ImportError as e:
+            self.logger.error("Invalid VSPK version")
+            self.logger.error(str(e))
+            sys.exit('Invalid VSPK version')
 
         auth = identity.Password(**self.cfg.get_keystone_creds())
         sess = session.Session(auth=auth)
