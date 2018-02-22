@@ -145,7 +145,7 @@ You can also specify a comma-separated list of tenants that should not be includ
 [sync]
 l2_name_format = $d
 l3_name_format = $d ($z) \ $s
-excluded_tenants= OpenStack_Org
+excluded_enterprises = OpenStack_Org
 sync_shared_subnets = False
 interval = 10
 ```
