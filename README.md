@@ -40,8 +40,7 @@ The below instructions will install the nuage-neutron-sync tool on a RHEL or Cen
 ## Tested OpenStack Distributions
 
 
-- Mitaka 
- - OSP 9.0
+- Pike 
 
 ## Required Software Packages
 
@@ -55,6 +54,7 @@ The following software must be available on the linux server/VM, please make sur
 - OpenStack: python-novaclient,
 - Nuage: vspk Python,
 - Nuage: neutronclient plugin,
+- VSPK
 
 
 ## nuage-neutron-sync user
@@ -64,7 +64,7 @@ Step 1: Log in on the VSD UI as csproot/csp.
 
 Step 2: Go to "Platform Configuration" > "Users" and create a user named "nuage-neutron-sync".
 
-Step 3: Go to "Groups" and assign this user to the Root Group.
+Step 3: Go to "Groups" and assign this user to the Root and CMS Groups.
 
 Step 4: SSH to the VSD VM and generate certificates for the nuage-neutron-sync user.
 
@@ -114,7 +114,7 @@ username = nuage-neutron-sync
 enterprise = csp
 cert=/etc/nuage-neutron-sync/nuage-neutron-sync.pem
 key=/etc/nuage-neutron-sync/nuage-neutron-sync-Key.pem
-version = v4_0
+version = v5_0
 ```
 
 Step 5: set the OpenStack credentials.
