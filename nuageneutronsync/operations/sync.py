@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import MySQLdb as mdb
-import vspk.v4_0 as vspk
+import vspk.v5_0 as vspk
 import logging
 from keystoneauth1 import session
 from keystoneauth1.identity import v3 as identity
