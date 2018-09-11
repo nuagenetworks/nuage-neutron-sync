@@ -7,7 +7,7 @@ except ImportError:
 
 setup(
     name='nuageneutronsync',
-    version='1.0.1',
+    version='1.0.2',
     packages=['nuageneutronsync', 'nuageneutronsync.utils', 'nuageneutronsync.operations'],
     data_files=[('/etc/nuage-neutron-sync', ['config/nuage-neutron-sync.conf']),
                 ('/etc/init.d', ['config/nuage-neutron-syncd'])],
@@ -35,5 +35,6 @@ setup(
         'netaddr',
         'MySQL-python',
         'prettytable',
+        'vspk',
     ]
 )
