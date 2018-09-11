@@ -10,7 +10,7 @@ from neutronclient.common.exceptions import NotFound as neutron_NotFound
 from keystoneauth1.exceptions.http import NotFound as keystone_NotFound
 from novaclient import client as nova_client
 from prettytable import PrettyTable
-import vspk.v4_0 as vspk
+import vspk.v5_0 as vspk
 
 
 class Tenant:
