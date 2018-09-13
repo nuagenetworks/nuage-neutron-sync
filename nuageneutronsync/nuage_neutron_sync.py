@@ -25,7 +25,7 @@ import sys
 
 
 def getargs():
-    return docopt(__doc__, version="nuage-neutron-sync 1.0.0")
+    return docopt(__doc__, version="nuage-neutron-sync 1.0.2")
 
 
 def execute():
