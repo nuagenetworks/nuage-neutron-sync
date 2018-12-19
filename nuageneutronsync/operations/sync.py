@@ -238,10 +238,12 @@ class Sync:
             mapping_correct = False
             self.logger.debug("DHCP not correct in subnet {0} (\"{1}\")".format(nuage_subnet.id, subnet_name))
 
-        if openstack_subnet['gateway_ip'] != gateway:
+        # Openstack subnets derived from Unmanaged Nuage L2 Domains will have subnet cidr:127.0.0.0/24 and gateway ip: 127.0.0.1 
+        # Below condition ignores this mismatch and passes only if there is a real change. 
+        if openstack_subnet['gateway_ip'] != gateway and openstack_subnet['gateway_ip'] != '127.0.0.1':
             mapping_correct = False
-            self.logger.debug("Gateway IP of subnet {0} (\"{1}\") changed to {2}".
-                              format(nuage_subnet.id, subnet_name, gateway))
+            self.logger.debug("Gateway IP of subnet {0} (\"{1}\") changed to {2}. But expecting {3}".
+                              format(nuage_subnet.id, subnet_name, gateway, openstack_subnet['gateway_ip']))
 
         if cidr != openstack_subnet['cidr']:
             self.logger.debug("CIDR of subnet {0} (\"{1}\") changed to {2}".format(nuage_subnet.id, subnet_name, cidr))
