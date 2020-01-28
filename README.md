@@ -173,5 +173,9 @@ Active: active (running)
 [nuage-subnet-list]: sample/Nuage-subnet-list.PNG
 [os-subnet-list]: sample/OS-subnet-list.PNG
 
+# Support disclaimer
 
+This tool has been developed as an example on how the synchronization between a VSD Managed environment and an OpenStack deployment. It is a proof of concept that is not officially supported by Nuage Networks. It can serve in that capacity in PoC or lab environments. 
+
+Any issues can be reported using the Github issue tracker, issues will be handled on a best effort support model with no obligations on timelines.
 
